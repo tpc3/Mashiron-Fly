@@ -3,8 +3,8 @@ use std::sync::RwLock;
 
 use crate::config::*;
 use crate::data::*;
-use crate::utils::react;
 use crate::js::js;
+use crate::utils::react;
 use chrono::Local;
 use fancy_regex::Regex;
 use once_cell::sync::Lazy;
@@ -36,69 +36,71 @@ pub async fn run(ctx: &Context, msg: &Message) {
             runner(&ctx, &msg, &yaml, cmd).await;
         }
         let content = msg.content.clone();
-        for (key, value) in yaml.as_hash().unwrap() {
-            match value {
-                Yaml::String(_) => {
-                    let key_str = key.as_str().unwrap();
-                    if content == key_str {
-                        runner(&ctx, &msg, &yaml, key_str).await;
+        if let Some(yaml_hash) = yaml.as_hash() {
+            for (key, value) in yaml_hash {
+                match value {
+                    Yaml::String(_) => {
+                        let key_str = key.as_str().unwrap();
+                        if content == key_str {
+                            runner(&ctx, &msg, &yaml, key_str).await;
+                        }
                     }
-                }
-                Yaml::Hash(_) => {
-                    //OR trigger
-                    let mut trigger = false;
-                    match &value["trigger"] {
-                        Yaml::Hash(_) => match &value["trigger"]["content"] {
+                    Yaml::Hash(_) => {
+                        //OR trigger
+                        let mut trigger = false;
+                        match &value["trigger"] {
+                            Yaml::Hash(_) => match &value["trigger"]["content"] {
+                                Yaml::String(s) => {
+                                    if let Ok(re) = Regex::new(&s) {
+                                        trigger = re.is_match(&content).unwrap_or(false);
+                                    }
+                                }
+                                Yaml::Array(arr) => {
+                                    for i in arr {
+                                        if let Yaml::String(s) = i {
+                                            if let Ok(re) = Regex::new(&s) {
+                                                let result = re.is_match(&content).unwrap_or(false);
+                                                if result && !trigger {
+                                                    trigger = true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                _ => (),
+                            },
                             Yaml::String(s) => {
                                 if let Ok(re) = Regex::new(&s) {
                                     trigger = re.is_match(&content).unwrap_or(false);
                                 }
                             }
+                            _ => (),
+                        }
+
+                        match &value["trigger"]["uid"] {
+                            Yaml::Integer(i) => {
+                                if *i as u64 == *msg.author.id.as_u64() && trigger {
+                                    runner(&ctx, &msg, &yaml, key.as_str().unwrap()).await;
+                                }
+                            }
                             Yaml::Array(arr) => {
-                                for i in arr {
-                                    if let Yaml::String(s) = i {
-                                        if let Ok(re) = Regex::new(&s) {
-                                            let result = re.is_match(&content).unwrap_or(false);
-                                            if result && !trigger {
-                                                trigger = true
-                                            }
+                                for val in arr {
+                                    if let Yaml::Integer(i) = val {
+                                        if *i as u64 == *msg.author.id.as_u64() && trigger {
+                                            runner(&ctx, &msg, &yaml, key.as_str().unwrap()).await;
                                         }
                                     }
                                 }
                             }
-                            _ => (),
-                        },
-                        Yaml::String(s) => {
-                            if let Ok(re) = Regex::new(&s) {
-                                trigger = re.is_match(&content).unwrap_or(false);
-                            }
-                        }
-                        _ => (),
-                    }
-
-                    match &value["trigger"]["uid"] {
-                        Yaml::Integer(i) => {
-                            if *i as u64 == *msg.author.id.as_u64() && trigger {
-                                runner(&ctx, &msg, &yaml, key.as_str().unwrap()).await;
-                            }
-                        }
-                        Yaml::Array(arr) => {
-                            for val in arr {
-                                if let Yaml::Integer(i) = val {
-                                    if *i as u64 == *msg.author.id.as_u64() && trigger {
-                                        runner(&ctx, &msg, &yaml, key.as_str().unwrap()).await;
-                                    }
+                            _ => {
+                                if trigger {
+                                    runner(&ctx, &msg, &yaml, key.as_str().unwrap()).await;
                                 }
                             }
                         }
-                        _ => {
-                            if trigger {
-                                runner(&ctx, &msg, &yaml, key.as_str().unwrap()).await;
-                            }
-                        }
                     }
+                    _ => (),
                 }
-                _ => (),
             }
         }
     }

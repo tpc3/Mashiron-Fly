@@ -3,9 +3,9 @@ use cached::{Cached, TimedSizedCache};
 use once_cell::sync::Lazy;
 use serde_derive::{Deserialize, Serialize};
 use std::fs;
+use std::path::Path;
 use std::sync::Mutex;
 use yaml_rust::{Yaml, YamlEmitter, YamlLoader};
-use std::path::Path;
 
 #[derive(Deserialize, Serialize)]
 pub struct Config {
@@ -29,7 +29,7 @@ pub static DATA: Lazy<Mutex<TimedSizedCache<u64, Yaml>>> = Lazy::new(|| {
         CONFIG.cache.time * 60,
     ))
 });
-pub static EMPTY: Lazy<Yaml> = Lazy::new(|| YamlLoader::load_from_str("").unwrap()[0].clone());
+pub static EMPTY: Lazy<Yaml> = Lazy::new(|| Yaml::from_str("").clone());
 
 fn load(path_id: &String) -> Option<Yaml> {
     let path = to_path(path_id);
@@ -52,11 +52,16 @@ pub fn dump(yaml: &Yaml) -> String {
     let mut out_str = String::new();
     let mut emitter = YamlEmitter::new(&mut out_str);
     emitter.dump(&yaml).unwrap();
-    out_str
+    if out_str.contains(":") {
+        out_str
+    } else {
+        "".to_string()
+    }
+    
 }
 
 fn write(id: &u64, out_str: &str) {
-    if out_str.len() != 0 {
+    if out_str.contains(":") {
         fs::write(to_path(&id.to_string()), out_str).unwrap();
     } else {
         fs::remove_file(to_path(&id.to_string())).unwrap();
@@ -115,10 +120,15 @@ pub fn new(id: &u64, content: &str) -> Result<(), String> {
                         return Err("Already exists".to_string());
                     }
                 }
+                let mut dumped_yaml = dump(&yaml);
+                if !dumped_yaml.contains(":") {
+                    dumped_yaml = "".to_string();
+                }
+
                 //Just in case
                 let new_yaml = YamlLoader::load_from_str(&format!(
                     "{}\n{}",
-                    dump(&yaml),
+                    dumped_yaml,
                     dump(&doc[0]).replace("---\n", "")
                 ))
                 .unwrap();
@@ -212,7 +222,7 @@ fn verify<'a>(request: &Yaml) -> Result<Vec<String>, &'a str> {
                             }
                         }
                     }
-                    Yaml::BadValue => {},
+                    Yaml::BadValue => {}
                     _ => return Err("Emoji must be int or string"),
                 }
                 if let Yaml::String(_) = &value["js"] {
@@ -230,13 +240,12 @@ fn verify<'a>(request: &Yaml) -> Result<Vec<String>, &'a str> {
 
 pub fn get(id: &u64) -> Yaml {
     if let Some(cache) = DATA.lock().unwrap().cache_get(id) {
-        (*cache).clone()
+        return (*cache).clone()
+    }
+    if let Some(yaml) = load(&id.to_string()) {
+        return yaml;
     } else {
-        if let Some(yaml) = load(&id.to_string()) {
-            return yaml;
-        } else {
-            DATA.lock().unwrap().cache_set(*id, EMPTY.clone());
-            EMPTY.clone()
-        }
+        DATA.lock().unwrap().cache_set(*id, EMPTY.clone());
+        EMPTY.clone()
     }
 }

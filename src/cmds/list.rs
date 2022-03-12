@@ -13,7 +13,10 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
     if msg.guild_id == None {
         return Ok(())
     }
-    let out_str = dump(&get(msg.guild_id.unwrap().as_u64()));
+    let mut out_str = dump(&get(msg.guild_id.unwrap().as_u64()));
+    if out_str.len() == 0 {
+        out_str = "Empty".to_string();
+    }
     if out_str.chars().count() > 2000 {
         msg.channel_id.send_files(&ctx.http, vec![(out_str.as_bytes(), "list.yaml")], |m| m).await.unwrap();
     }
