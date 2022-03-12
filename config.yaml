@@ -1,0 +1,21 @@
+token:
+key:
+data: "./data/"
+shards: 1
+debug: true
+
+cache: 
+  time: 10 # min
+  size: 100
+
+infos:
+  name: "vote_bot"
+  prefix: "m."
+  activity: "Mashiron-Fly is running! | m.help"
+  help: "https://github.com/tpc3/Mashiron-Fly/wiki"
+  image: "https://raw.githubusercontent.com/tpc3/Mashiron-Fly/master/mashiron.png"
+
+js:
+  enabled: true
+  timeout: 1 # ms
+  memory: 500000 # bytes
