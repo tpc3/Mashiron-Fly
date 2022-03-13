@@ -78,25 +78,35 @@ pub fn remove(id: &u64, key: &str) -> bool {
         if !yaml_str.ends_with("\n") {
             yaml_str += "\n"
         }
-        for v in yaml_str.clone().lines() {
+        let mut lines: Vec<&str> = yaml_str.lines().collect();
+
+        let mut i = 0;
+        let mut to_be_removed: Vec<usize> = vec![];
+        for v in lines.clone() {
             if v.starts_with(&target) {
-                if let Yaml::String(_) = yaml[key] {
-                    yaml_str = yaml_str.replace(&format!("{}", v), "");
-                } else {
-                    yaml_str = yaml_str.replace(&format!("{}\n", v), "");
+                to_be_removed.push(i);
+                if let Yaml::String(_) = yaml[key] {} else {
                     delete = true;
                 }
             } else if delete {
                 if v.starts_with(" ") {
-                    let replaced = yaml_str.replace(&format!("{}\n", v), "");
-                    yaml_str = replaced;
+                    to_be_removed.push(i);
                 } else {
                     break;
                 }
             }
+            i += 1;
         }
+
+        i = 0;
+        lines.retain(|_|{
+            let a = !to_be_removed.contains(&i);
+            i += 1;
+            a
+        });
+
         //Just in case
-        let new_yaml = YamlLoader::load_from_str(&yaml_str).unwrap();
+        let new_yaml = YamlLoader::load_from_str(&lines.join("\n")).unwrap();
         write(id, &dump(&new_yaml[0]));
         return true;
     }
