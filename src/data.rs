@@ -75,6 +75,7 @@ pub fn remove(id: &u64, key: &str) -> bool {
         let mut yaml_str = dump(&yaml);
         let mut delete = false;
         let target = format!("{}:", key);
+        let target_dq = format!("\"{}\":", key);
         if !yaml_str.ends_with("\n") {
             yaml_str += "\n"
         }
@@ -83,7 +84,7 @@ pub fn remove(id: &u64, key: &str) -> bool {
         let mut i = 0;
         let mut to_be_removed: Vec<usize> = vec![];
         for v in lines.clone() {
-            if v.starts_with(&target) {
+            if v.starts_with(&target) || v.starts_with(&target_dq) {
                 to_be_removed.push(i);
                 if let Yaml::String(_) = yaml[key] {} else {
                     delete = true;
