@@ -19,6 +19,7 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
     }
     if out_str.chars().count() > 2000 {
         msg.channel_id.send_files(&ctx.http, vec![(out_str.as_bytes(), "list.yaml")], |m| m).await.unwrap();
+        return Ok(())
     }
     msg.channel_id
         .send_message(&ctx, |new_msg| {
