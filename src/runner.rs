@@ -125,7 +125,6 @@ async fn runner(ctx: &Context, msg: &Message, yaml: &Yaml, cmd: &str) {
                     let reply = builder(&ctx, &msg, &s).await;
                     ifreply = true;
                     reply_msg = msg.reply(&ctx.http, reply).await;
-                    msg.react(&ctx.http, '👀').await.unwrap();
                 }
                 Yaml::Array(arr) => {
                     let rnd = arr.choose(&mut thread_rng());
@@ -134,7 +133,6 @@ async fn runner(ctx: &Context, msg: &Message, yaml: &Yaml, cmd: &str) {
                             let reply = builder(&ctx, &msg, &s.to_string()).await;
                             ifreply = true;
                             reply_msg = msg.reply(&ctx.http, reply).await;
-                            msg.react(&ctx.http, '👀').await.unwrap();
                         }
                     }
                 }
@@ -171,6 +169,7 @@ async fn runner(ctx: &Context, msg: &Message, yaml: &Yaml, cmd: &str) {
                 if !res.trim().is_empty() {
                     msg.reply(&ctx.http, res).await.unwrap();
                 }
+                msg.react(&ctx.http, '👀').await.unwrap();
             }
         }
         _ => (),
