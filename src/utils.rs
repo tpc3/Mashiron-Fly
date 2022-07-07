@@ -40,11 +40,21 @@ pub async fn react(ctx: &Context, msg: &Message, yaml: &Yaml) {
             }
         }
         Yaml::Integer(i) => {
-            if let Some(guild) = msg.guild(&ctx.cache).await {
-                let emoji = EmojiId(*i as u64);
-                if guild.emojis.contains_key(&emoji) {
-                    msg.react(&ctx.http, guild.emojis[&emoji].clone()).await;
+            let emojis;
+            if let Some(g) = msg.guild(&ctx.cache).await {
+                emojis = g.emojis;
+            } else {
+                let res = ctx.http.get_guild(*msg.guild_id.unwrap().as_u64()).await;
+                if let Ok(g) = res {
+                    emojis = g.emojis;
+                } else {
+                    // TODO: return error
+                    return;
                 }
+            }
+            let emoji = EmojiId(*i as u64);
+            if emojis.contains_key(&emoji) {
+                msg.react(&ctx.http, emojis[&emoji].clone()).await;
             }
         }
         _ => (),
