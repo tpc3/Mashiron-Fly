@@ -21,13 +21,22 @@ pub struct Args<'a> {
 }
 
 pub async fn js(ctx: &Context, msg: &Message, js: &str) -> String {
-    let channel = &msg.channel(&ctx.cache).await.unwrap();
+    let channel;
+    if let Some(c) = &msg.channel(&ctx.cache).await {
+        channel = c.clone();
+    } else {
+        if let Ok(c) = ctx.http.get_channel(*msg.channel_id.as_u64()).await {
+            channel = c;
+        } else {
+            return "Channel not found".to_string();
+        }
+    }
     let args = Args {
         ctx,
         msg,
         js,
         nickname: &msg.author_nick(&ctx.http).await.unwrap_or("".to_string()),
-        channel,
+        channel: &channel,
         args: msg.content.split(" ").collect(),
         category: channel.clone().category(),
     };
